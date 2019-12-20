@@ -8,8 +8,8 @@ task run_interaction {
 	Boolean? robust
 	String? compute_option
 	String out_name
-	String? memory = 10
-	String? disk = 20
+	Int? memory = 10
+	Int? disk = 20
     Boolean? bgen
 
 
@@ -51,8 +51,8 @@ workflow run_quicktest {
         Boolean? robust
         String? compute_option
         Array[String] out_names
-        String? memory
-        String? disk
+        Int? memory
+        Int? disk
         Boolean? bgen
 
         
