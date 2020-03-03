@@ -1,76 +1,124 @@
-task run_interaction {
-	File genofile
+task process_phenos {
+	
 	File phenofile
-	String npheno
-	String ncovar
-	Boolean? binary_outcome
-	Boolean? interaction
-	Boolean? robust
-	String? compute_option
-	String out_name
-	Int? memory = 10
-	Int? disk = 20
-    Boolean? bgen
-
+	String sample_id_header
+	String outcome
+	String covar_headers
+	String exposure
+	String? delimiter = ","
+	String? missing = "NA"
 
 	command {
-		/quicktest-1.1_bgen_v1.2/quicktest \
-		--geno ${genofile} \
-		--pheno ${phenofile} \
-		--npheno ${npheno} \
-		--ncovar ${ncovar} \
-		--method-mean \
-		${default="" true="--method-binary 0.5" false="" binary_outcome} \
-		${default="--method-interaction" true="--method-interaction" false="" interaction} \
-		${default="" true="--method-robust" false="" robust} \
-		${compute_option} \
-		--out quicktest_${out_name}.out \
-        ${default="--bgen" true="--bgen" false="" bgen}
+		python3 /format_quicktest_phenos.py ${phenofile} ${sample_id_header} ${outcome} "${covar_headers}" ${exposure} "${delimiter}" ${missing}
 	}
 
 	runtime {
-		docker: "deadpan39/gxe_quicktest_12112019:latest"
+		docker: "quay.io/large-scale-gxe-methods/quicktest-workflow"
+		memory: "2 GB"
+	}
+
+        output {
+                File pheno_fmt = "quicktest_phenotypes.csv"
+		File covar_file = "covar_string.txt"
+	}
+}
+
+task run_interaction {
+
+	#File genofile
+	#File phenofile
+	#String npheno
+	#String ncovar
+	#Boolean? binary_outcome
+	#Boolean? interaction
+	#Boolean? robust
+	#String? compute_option
+	#String out_name
+	#Int? memory = 10
+	#Int? disk = 20
+   	#Boolean? bgen  
+
+	File genofile
+	File? samplefile
+	File phenofile
+	String outcome
+	Boolean binary_outcome
+	File covar_file
+	String? missing = "NaN"
+	Boolean robust
+	Int? memory = 10
+	Int? disk = 20
+
+	String covar_string = read_string(covar_file)
+
+	command {
+		/quicktest-1.1_bgen_v1.2/quicktest \
+			--geno ${genofile} \
+			--bgen \
+			--pheno ${phenofile} \
+			--npheno ${outcome} \
+			${covar_string} \
+			--method-mean \
+			${default="" true="--method-binary 0.5" false="" binary_outcome} \
+			--method-interaction \
+			--missing-code ${missing} \
+			${default="" true="--method-robust" false="" robust} \
+			--out quicktest_res \
+	}
+
+	runtime {
+		docker: "quay.io/large-scale-gxe-methods/quicktest-workflow"
 		memory: "${memory} GB"
 		disks: "local-disk ${disk} HDD"
 	}
 
 	output {
-        File res = "quicktest_${out_name}.out"
+        File res = "quicktest_res"
     }
 }
 
 
 workflow run_quicktest {
 
-        Array[File] genofiles
-        File phenofile
-        String npheno
-        String ncovar
-        Boolean? binary_outcome
-        Boolean? interaction
-        Boolean? robust
-        String? compute_option
-        Array[String] out_names
-        Int? memory
-        Int? disk
-        Boolean? bgen
+	Array[File] genofiles
+	Float? maf
+	File? samplefile
+	File phenofile
+	String? sample_id_header
+	String outcome
+	Boolean binary_outcome
+	String covar_headers
+	String exposures
+	String? delimiter
+	String? missing
+	Boolean robust
+	Int? memory
+	Int? disk
+	Int? threads
 
-        
+	call process_phenos {
+		input:
+			phenofile = phenofile,
+			sample_id_header = sample_id_header,
+			outcome = outcome,
+			covar_headers = covar_headers,
+			exposure = exposures,
+			delimiter = delimiter,
+			missing = missing
+	}	
+
         scatter (i in range(length(genofiles))) {
                 call run_interaction {
                         input:
                                 genofile = genofiles[i],
-                                phenofile = phenofile,
-                                npheno = npheno,
-                                ncovar = ncovar,
+                                phenofile = process_phenos.pheno_fmt,
+                                covar_file = process_phenos.covar_file,
+				outcome = outcome,
                                 binary_outcome = binary_outcome,
-                                interaction = interaction,
+				missing = missing,
                                 robust = robust,
-                                compute_option = compute_option,
-                                out_name = out_names[i],
                                 memory = memory,        
-                                disk = disk,
-                                bgen = bgen
+                                disk = disk
                 }
         }
 
@@ -92,6 +140,6 @@ workflow run_quicktest {
         meta {
                 author: "Ye Chen"
                 email: "ychen115@mgh.harvard.edu"
-                description: "Run interaction tests using the Quicktest."
+                description: "Run gene-environment interaction tests using the QuickTest program."
         }
 }

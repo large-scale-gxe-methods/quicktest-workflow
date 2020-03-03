@@ -1,0 +1,13 @@
+{
+  "run_quicktest.genofiles": ["testfiles/example.bgen", "testfiles/example.bgen"],
+  "run_quicktest.phenofile": "testfiles/example.pheno",
+  "run_quicktest.sample_id_header": "sampleid",
+  "run_quicktest.outcome": "pheno1",
+  "run_quicktest.binary_outcome": "false",
+  "run_quicktest.covar_headers": "cov1 cov2 cov3",
+  "run_quicktest.exposures": "cov1",
+  "run_quicktest.delimiter": ",",
+  "run_quicktest.missing": "NA",
+  "run_quicktest.robust": "true",
+  "run_quicktest.memory": "1"
+}
