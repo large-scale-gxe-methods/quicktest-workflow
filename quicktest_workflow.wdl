@@ -25,19 +25,6 @@ task process_phenos {
 
 task run_interaction {
 
-	#File genofile
-	#File phenofile
-	#String npheno
-	#String ncovar
-	#Boolean? binary_outcome
-	#Boolean? interaction
-	#Boolean? robust
-	#String? compute_option
-	#String out_name
-	#Int? memory = 10
-	#Int? disk = 20
-   	#Boolean? bgen  
-
 	File genofile
 	File? samplefile
 	File phenofile
@@ -52,6 +39,8 @@ task run_interaction {
 	String covar_string = read_string(covar_file)
 
 	command {
+		echo "" > resource_usage.log
+		dstat -c -d -m --nocolor 10 1>>resource_usage.log &
 		/quicktest-1.1_bgen_v1.2/quicktest \
 			--geno ${genofile} \
 			--bgen \
@@ -74,7 +63,47 @@ task run_interaction {
 
 	output {
         File res = "quicktest_res"
+	File resource_usage = "resource_usage.log"
     }
+}
+
+task standardize_output {
+
+	File resfile
+	String exposure
+	String outfile_base = basename(resfile)
+	String outfile = "${outfile_base}.fmt"
+
+	command {
+		python3 /format_quicktest_output.py ${resfile} ${exposure} ${outfile}
+	}
+
+	runtime {
+		docker: "quay.io/large-scale-gxe-methods/quicktest-workflow"
+		memory: "2 GB"
+	}
+
+	output {
+		File res_fmt = "${outfile}"
+	}
+}
+
+task cat_results {
+
+	Array[File] results_array
+
+	command {
+		head -1 ${results_array[0]} > all_results.txt && \
+			for res in ${sep=" " results_array}; do tail -n +2 $res >> all_results.txt; done
+	}
+	
+	runtime {
+		docker: "quay.io/large-scale-gxe-methods/probabel-workflow"
+		disks: "local-disk 5 HDD"
+	}
+	output {
+		File all_results = "all_results.txt"
+	}
 }
 
 

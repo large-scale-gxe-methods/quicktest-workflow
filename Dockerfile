@@ -12,4 +12,4 @@ RUN cd quicktest-1.1_bgen_v1.2 && \
 make clean && \
 make -f Makefile
 
-COPY format_quicktest_phenos.py /
+COPY format_quicktest_phenos.py format_quicktest_output.py /
