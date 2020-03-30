@@ -3,13 +3,13 @@ task process_phenos {
 	File phenofile
 	String sample_id_header
 	String outcome
-	String covar_headers
 	String exposure
+	String? covar_names = ""
 	String? delimiter = ","
 	String? missing = "NA"
 
 	command {
-		python3 /format_quicktest_phenos.py ${phenofile} ${sample_id_header} ${outcome} "${covar_headers}" ${exposure} "${delimiter}" ${missing}
+		python3 /format_quicktest_phenos.py ${phenofile} ${sample_id_header} ${outcome} "${exposure}" "${covar_names}" "${delimiter}" ${missing}
 	}
 
 	runtime {
@@ -70,12 +70,11 @@ task run_interaction {
 task standardize_output {
 
 	File resfile
-	String exposure
 	String outfile_base = basename(resfile)
 	String outfile = "${outfile_base}.fmt"
 
 	command {
-		python3 /format_quicktest_output.py ${resfile} ${exposure} ${outfile}
+		python3 /format_quicktest_output.py ${resfile} ${outfile}
 	}
 
 	runtime {
@@ -116,22 +115,21 @@ workflow run_quicktest {
 	String? sample_id_header
 	String outcome
 	Boolean binary_outcome
-	String covar_headers
-	String exposures
+	String exposure_names
+	String? covar_names
 	String? delimiter
 	String? missing
 	Boolean robust
 	Int? memory
 	Int? disk
-	Int? threads
 
 	call process_phenos {
 		input:
 			phenofile = phenofile,
 			sample_id_header = sample_id_header,
 			outcome = outcome,
-			covar_headers = covar_headers,
-			exposure = exposures,
+			exposure = exposure_names,
+			covar_names = covar_names,
 			delimiter = delimiter,
 			missing = missing
 	}	
@@ -151,20 +149,39 @@ workflow run_quicktest {
                 }
         }
 
-        
-        parameter_meta {
-                genofiles: "Imputed genotypes in bgen format"
-                phenofile: "Tab-delimited phenotype file with Family IDs in the first column, Individual IDs in the second column, missing in the third column and the outcome of interest (quantitative or binary) in the following columns. Phenotyple file with multiple outcomes is supported. Phenotype file used in analysis can be specified by npheno option with the name of phenotype variable"
-                npheno: "Speciﬁes which column in the phenotype ﬁle to use for analysis. If value matches any token in the header, the corresponding column is used. Otherwise, value is interpreted as a number, and the (value+3)−th column will be used. The default value is 1, meaning to analyse the phenotype in the 4−th column of the phenotype ﬁle."
-                ncovar: "Speciﬁes that a column in the phenotype ﬁle is to be used as a covariate in the analysis. The argument value is handled in the same way as for −−npheno. The −−ncovar option can be used multiple times to specify multiple covariates, but at present only the ﬁrst covariate is used for interaction analysis."
-                binary_outcome: "Boolean: is the outcome binary? Otherwise, quantitative is assumed. Please code the binary outcome as 0 & 1, the software set the split point to be 0.5 to code levels of the outcome. "
-                interaction: "Boolean: should an interaction term be included? The first covariate in the phenotype file will be used. Defaults to true. If multiple ncovar option exist, only the ﬁrst covariate is used for interaction analysis."
-                robust: "Boolean: should robust/sandwich/Huber-White standard errors be used? Default to be false."
-                Compute_option: "Optional computational results provided by the software, such as −−compute−alphaHat, computing a simple method-of-moments estimator for alpha, −−compute−MAF, computing the (expected) minor allele frequency for each SNP/locus, −−compute−rSqHat, computing r−squared-hat for each SNP, which is the (estimated) fraction of variance in unobserved 0/1/2 genotype explained by the the individual mean genotypes."
-                out_names: "Names to be included for distinguishing output files."
-                memory: "Memory required for the modeling step (in GB)."
-                disk: "Disk space required for the modeling step (in GB)."
-        }
+	scatter (resfile in run_interaction.res) {
+		call standardize_output {
+			input:
+				resfile = resfile
+		}
+	}	
+
+	call cat_results {
+		input:
+			results_array = standardize_output.res_fmt
+	}
+
+        output {
+                File results = cat_results.all_results
+		Array[File] resource_usage = run_interaction.resource_usage
+	}
+
+	parameter_meta {
+		genofiles: "Array of genotype filepaths in .bgen format."
+		maf: "Minor allele frequency threshold for pre-filtering variants as a fraction (default is 0.001)."
+		samplefile: "Optional .sample file accompanying the .bgen file. Required for proper function if .bgen does not store sample identifiers."
+		phenofile: "Phenotype filepath."	
+		sample_id_header: "Optional column header name of sample ID in phenotype file."
+		outcome: "Column header name of phenotype data in phenotype file."
+                binary_outcome: "Boolean: is the outcome binary? Otherwise, quantitative is assumed."
+		exposure_names: "Column header name(s) of the exposures for genotype interaction testing (space-delimited). Only one exposure is currently allowed."
+		covar_names: "Column header name(s) of any covariates for which only main effects should be included selected covariates in the pheno data file (space-delimited). This set should not overlap with exposure_names."
+		delimiter: "Delimiter used in the phenotype file."
+		missing: "Missing value key of phenotype file."
+                robust: "Boolean: should robust (a.k.a. sandwich/Huber-White) standard errors be used?"
+		memory: "Requested memory (in GB)."
+		disk: "Requested disk space (in GB)."
+	}
 
         meta {
                 author: "Ye Chen"

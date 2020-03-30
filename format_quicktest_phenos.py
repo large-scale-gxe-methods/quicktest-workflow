@@ -2,10 +2,9 @@ import sys
 import pandas as pd
 
 
-phenofile, sample_id_header, outcome, covar_headers, exposure, delimiter, missing = sys.argv[1:8]
+phenofile, sample_id_header, outcome, exposure, covar_names, delimiter, missing = sys.argv[1:8]
 
-covars = covar_headers.split(" ")
-covars.remove(exposure)
+covars = [] if covar_names == "" else covar_names.split(" ")
 output_cols = [sample_id_header, sample_id_header, outcome, exposure] + covars
 
 
