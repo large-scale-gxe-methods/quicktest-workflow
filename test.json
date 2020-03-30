@@ -7,7 +7,7 @@
   "run_quicktest.covar_headers": "cov1 cov2 cov3",
   "run_quicktest.exposures": "cov1",
   "run_quicktest.delimiter": ",",
-  "run_quicktest.missing": "NA",
+  "run_quicktest.missing": "NaN",
   "run_quicktest.robust": "true",
   "run_quicktest.memory": "1"
 }
