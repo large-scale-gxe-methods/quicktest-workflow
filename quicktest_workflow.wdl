@@ -26,6 +26,7 @@ task process_phenos {
 task run_interaction {
 
 	File genofile
+	Boolean? is_bgen = false
 	File? samplefile
 	File phenofile
 	String outcome
@@ -43,7 +44,7 @@ task run_interaction {
 		dstat -c -d -m --nocolor 10 1>>resource_usage.log &
 		/quicktest-1.1_bgen_v1.2/quicktest \
 			--geno ${genofile} \
-			--bgen \
+			${default="" true="--bgen" false="" is_bgen} \
 			--pheno ${phenofile} \
 			--npheno ${outcome} \
 			${covar_string} \
@@ -109,6 +110,7 @@ task cat_results {
 workflow run_quicktest {
 
 	Array[File] genofiles
+	Boolean? is_bgen
 	Float? maf
 	File? samplefile
 	File phenofile
@@ -134,10 +136,11 @@ workflow run_quicktest {
 			missing = missing
 	}	
 
-        scatter (i in range(length(genofiles))) {
+	scatter (genofile in genofiles) {
                 call run_interaction {
                         input:
-                                genofile = genofiles[i],
+                                genofile = genofile,
+				is_bgen = is_bgen,
                                 phenofile = process_phenos.pheno_fmt,
                                 covar_file = process_phenos.covar_file,
 				outcome = outcome,
@@ -167,7 +170,8 @@ workflow run_quicktest {
 	}
 
 	parameter_meta {
-		genofiles: "Array of genotype filepaths in .bgen format."
+		genofiles: "Array of genotype filepaths in Oxford (.gen.gz) format (may be gzipped)."
+		is_bgen: "Optional boolean to specify whether the input genotype file is in .bgen format (default is False, i.e. .gen format)."
 		maf: "Minor allele frequency threshold for pre-filtering variants as a fraction (default is 0.001)."
 		samplefile: "Optional .sample file accompanying the .bgen file. Required for proper function if .bgen does not store sample identifiers."
 		phenofile: "Phenotype filepath."	

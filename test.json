@@ -1,5 +1,6 @@
 {
-  "run_quicktest.genofiles": ["testfiles/example.bgen", "testfiles/example.bgen"],
+  "run_quicktest.genofiles": ["testfiles/example.gen.gz", "testfiles/example.gen.gz"],
+  "run_quicktest.is_bgen": "false",
   "run_quicktest.phenofile": "testfiles/example.pheno",
   "run_quicktest.sample_id_header": "sampleid",
   "run_quicktest.outcome": "pheno1",
