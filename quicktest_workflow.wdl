@@ -1,6 +1,7 @@
 task process_phenos {
 	
 	File phenofile
+	File samplefile
 	String sample_id_header
 	String outcome
 	String exposure
@@ -9,7 +10,7 @@ task process_phenos {
 	String? missing = "NA"
 
 	command {
-		python3 /format_quicktest_phenos.py ${phenofile} ${sample_id_header} ${outcome} "${exposure}" "${covar_names}" "${delimiter}" ${missing}
+		python3 /format_quicktest_phenos.py ${phenofile} ${sample_id_header} ${outcome} "${exposure}" "${covar_names}" "${delimiter}" ${missing} "${samplefile}"
 	}
 
 	runtime {
@@ -27,7 +28,6 @@ task run_interaction {
 
 	File genofile
 	Boolean? is_bgen = false
-	File? samplefile
 	File phenofile
 	String outcome
 	Boolean binary_outcome
@@ -112,9 +112,9 @@ workflow run_quicktest {
 	Array[File] genofiles
 	Boolean? is_bgen
 	Float? maf
-	File? samplefile
+	Array[File] samplefiles
 	File phenofile
-	String? sample_id_header
+	String? sample_id_header = "sampleid"
 	String outcome
 	Boolean binary_outcome
 	String exposure_names
@@ -125,24 +125,27 @@ workflow run_quicktest {
 	Int? memory
 	Int? disk
 
-	call process_phenos {
-		input:
-			phenofile = phenofile,
-			sample_id_header = sample_id_header,
-			outcome = outcome,
-			exposure = exposure_names,
-			covar_names = covar_names,
-			delimiter = delimiter,
-			missing = missing
-	}	
+	scatter (samplefile in samplefiles) {
+		call process_phenos {
+			input:
+				phenofile = phenofile,
+				samplefile = samplefile,
+				sample_id_header = sample_id_header,
+				outcome = outcome,
+				exposure = exposure_names,
+				covar_names = covar_names,
+				delimiter = delimiter,
+				missing = missing
+		}	
+	}
 
-	scatter (genofile in genofiles) {
+	scatter (i in range(length(genofiles))) {
                 call run_interaction {
                         input:
-                                genofile = genofile,
+                                genofile = genofiles[i],
 				is_bgen = is_bgen,
-                                phenofile = process_phenos.pheno_fmt,
-                                covar_file = process_phenos.covar_file,
+                                phenofile = process_phenos.pheno_fmt[i],
+                                covar_file = process_phenos.covar_file[i],
 				outcome = outcome,
                                 binary_outcome = binary_outcome,
 				missing = missing,
@@ -173,7 +176,7 @@ workflow run_quicktest {
 		genofiles: "Array of genotype filepaths in Oxford (.gen.gz) format (may be gzipped)."
 		is_bgen: "Optional boolean to specify whether the input genotype file is in .bgen format (default is False, i.e. .gen format)."
 		maf: "Minor allele frequency threshold for pre-filtering variants as a fraction (default is 0.001)."
-		samplefile: "Optional .sample file accompanying the .bgen file. Required for proper function if .bgen does not store sample identifiers."
+		samplefile: "Optional .sample file accompanying the .gen/.bgen file. Required for proper function if .gen/.bgen does not store sample identifiers."
 		phenofile: "Phenotype filepath."	
 		sample_id_header: "Optional column header name of sample ID in phenotype file."
 		outcome: "Column header name of phenotype data in phenotype file."
