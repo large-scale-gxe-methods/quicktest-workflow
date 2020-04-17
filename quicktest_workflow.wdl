@@ -40,8 +40,10 @@ task run_interaction {
 	String covar_string = read_string(covar_file)
 
 	command {
+		#dstat -c -d -m --nocolor 10 1>>resource_usage.log &
 		echo "" > resource_usage.log
-		dstat -c -d -m --nocolor 10 1>>resource_usage.log &
+		atop -x -P PRC,PRM,PRD | grep '(GEM)' 1>>resource_usage.log &
+
 		/quicktest-1.1_bgen_v1.2/quicktest \
 			--geno ${genofile} \
 			${default="" true="--bgen" false="" is_bgen} \
