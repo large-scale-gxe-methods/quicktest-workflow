@@ -6,7 +6,7 @@ phenofile, sample_id_header, outcome, exposure, covar_names, delimiter, missing,
 
 phenos = pd.read_csv(phenofile, sep=delimiter, na_values=missing)
 
-if samplefile != 0:  # Optional sample file ensures correct ordering of IDs
+if samplefile != "":  # Optional sample file ensures correct ordering of IDs
     sample = pd.read_csv(samplefile, sep=" ", skiprows=2, header=None, usecols=[1],
                          names=["id"])
     phenos = pd.merge(sample, phenos, how="left", left_on="id",
