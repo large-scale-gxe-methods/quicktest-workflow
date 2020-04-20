@@ -40,21 +40,20 @@ task run_interaction {
 	String covar_string = read_string(covar_file)
 
 	command {
-		#dstat -c -d -m --nocolor 10 1>>resource_usage.log &
-		echo "" > resource_usage.log
-		atop -x -P PRC,PRM,PRD | grep '(GEM)' 1>>resource_usage.log &
+		touch resource_usage.log
+		atop -x -P CPU,DSK,PRM 1 | grep -e CPU -e DSK -e '(quicktest)' 1>>resource_usage.log &
 
 		/quicktest-1.1_bgen_v1.2/quicktest \
 			--geno ${genofile} \
-			${default="" true="--bgen" false="" is_bgen} \
+			${true="--bgen" false="" is_bgen} \
 			--pheno ${phenofile} \
 			--npheno ${outcome} \
 			${covar_string} \
 			--method-mean \
-			${default="" true="--method-binary 0.5" false="" binary_outcome} \
+			${true="--method-binary 0.5" false="" binary_outcome} \
 			--method-interaction \
 			--missing-code ${missing} \
-			${default="" true="--method-robust" false="" robust} \
+			${true="--method-robust" false="" robust} \
 			--out quicktest_res \
 	}
 
