@@ -5,9 +5,9 @@ task process_phenos {
 	String sample_id_header
 	String outcome
 	String exposure
-	String? covar_names = ""
-	String? delimiter = ","
-	String? missing = "NA"
+	String covar_names
+	String delimiter
+	String missing
 
 	command {
 		python3 /format_quicktest_phenos.py ${phenofile} ${sample_id_header} ${outcome} "${exposure}" "${covar_names}" "${delimiter}" ${missing} "${samplefile}"
@@ -27,21 +27,22 @@ task process_phenos {
 task run_interaction {
 
 	File genofile
-	Boolean? is_bgen = false
+	Boolean is_bgen
 	File phenofile
 	String outcome
 	Boolean binary_outcome
 	File covar_file
-	String? missing = "NaN"
+	String? missing = "NA"
 	Boolean robust
 	Int? memory = 10
 	Int? disk = 20
+	Int monitoring_freq
 
 	String covar_string = read_string(covar_file)
 
 	command {
-		touch resource_usage.log
-		atop -x -P CPU,DSK,PRM 1 | grep -e CPU -e DSK -e '(quicktest)' 1>>resource_usage.log &
+		dstat -c -d -m --nocolor 1 > system_resource_usage.log &
+		atop -x -P PRM 1 | grep '(quicktest)' > process_resource_usage.log &
 
 		/quicktest-1.1_bgen_v1.2/quicktest \
 			--geno ${genofile} \
@@ -65,7 +66,8 @@ task run_interaction {
 
 	output {
         File res = "quicktest_res"
-	File resource_usage = "resource_usage.log"
+	File system_resource_usage = "system_resource_usage.log"
+	File process_resource_usage = "process_resource_usage.log"
     }
 }
 
@@ -111,7 +113,7 @@ task cat_results {
 workflow run_quicktest {
 
 	Array[File] genofiles
-	Boolean? is_bgen
+	Boolean is_bgen = false
 	Float? maf
 	Array[File] samplefiles
 	File phenofile
@@ -119,12 +121,13 @@ workflow run_quicktest {
 	String outcome
 	Boolean binary_outcome
 	String exposure_names
-	String? covar_names
-	String? delimiter
-	String? missing
+	String? covar_names = ""
+	String? delimiter = ","
+	String? missing = "NA"
 	Boolean robust
 	Int? memory
 	Int? disk
+	Int? monitoring_freq = 1
 
 	scatter (samplefile in samplefiles) {
 		call process_phenos {
@@ -152,7 +155,8 @@ workflow run_quicktest {
 				missing = missing,
                                 robust = robust,
                                 memory = memory,        
-                                disk = disk
+                                disk = disk,
+				monitoring_freq = monitoring_freq
                 }
         }
 
@@ -170,7 +174,8 @@ workflow run_quicktest {
 
         output {
                 File results = cat_results.all_results
-		Array[File] resource_usage = run_interaction.resource_usage
+		Array[File] system_resource_usage = run_interaction.system_resource_usage
+		Array[File] process_resource_usage = run_interaction.process_resource_usage
 	}
 
 	parameter_meta {
@@ -189,6 +194,7 @@ workflow run_quicktest {
                 robust: "Boolean: should robust (a.k.a. sandwich/Huber-White) standard errors be used?"
 		memory: "Requested memory (in GB)."
 		disk: "Requested disk space (in GB)."
+		monitoring_freq: "Delay between each output for process monitoring (in seconds). Default is 1 second."
 	}
 
         meta {
