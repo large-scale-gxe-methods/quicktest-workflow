@@ -75,11 +75,13 @@ task run_interaction {
 task standardize_output {
 
 	File resfile
+    Boolean robust
+
 	String outfile_base = basename(resfile)
 	String outfile = "${outfile_base}.fmt"
 
 	command {
-		python3 /format_quicktest_output.py ${resfile} ${outfile}
+		python3 /format_quicktest_output.py ${resfile} ${outfile} ${robust}
 	}
 
 	runtime {
@@ -167,7 +169,8 @@ workflow run_quicktest {
 	scatter (resfile in run_interaction.res) {
 		call standardize_output {
 			input:
-				resfile = resfile
+				resfile = resfile,
+                robust = robust
 		}
 	}	
 

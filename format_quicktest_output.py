@@ -3,12 +3,17 @@ import pandas as pd
 from scipy.stats import chi2
 
 
-resfile, outfile = sys.argv[1:3]
+resfile, outfile, robust = sys.argv[1:4]
 
 names_dict = {'id1': 'SNPID', 'AlleleA': 'Allele1', 'AlleleB': 'Allele2', 
 	      'snp.beta': 'Beta_Main', 'snp.se': 'SE_Beta_Main', 
 	      'interaction.beta': 'Beta_Interaction_1', 
 	      'interaction.se': 'SE_Beta_Interaction_1_1'}
+
+if robust == "false":
+    pd.read_csv(resfile, sep=" ").to_csv(outfile, sep=" ", index=False,
+                                         na_rep="NaN")
+    sys.exit(0)
 
 res = (pd.read_csv(resfile, sep=" ")
        .rename(columns=names_dict)
