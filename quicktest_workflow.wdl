@@ -63,6 +63,8 @@ task run_interaction {
 		docker: "quay.io/large-scale-gxe-methods/quicktest-workflow"
 		memory: "${memory} GB"
 		disks: "local-disk ${disk} HDD"
+		gpu: false
+		dx_timeout: "7D0H00M"
 	}
 
 	output {
@@ -132,7 +134,7 @@ workflow run_quicktest {
 	Int? disk
 	Int? monitoring_freq = 1
 
-	Int ppmem = ceil(size(phenofile, "GB")) + 1
+	Int ppmem = 2 * ceil(size(phenofile, "GB")) + 1
 
 	scatter (samplefile in samplefiles) {
 		call process_phenos {
